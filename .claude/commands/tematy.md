@@ -40,7 +40,7 @@ Dla każdego z 6 obszarów wykonaj kilka zapytań WebSearch. Najpierw zawężaj 
 
 Obiecujące wyniki otwórz przez WebFetch i ustal:
 - **datę publikacji lub zmiany**, która musi mieścić się w okresie (inaczej odrzuć),
-- **status**: `obowiązuje` / `uchwalone` / `projekt` / `zapowiedź`,
+- **status**: dokładnie jedna z wartości `obowiązuje` / `uchwalone` / `projekt` / `zapowiedź`, bez dopisków w nawiasach. `obowiązuje` tylko wtedy, gdy przepis już jest stosowany; akt ogłoszony, ale stosowany od przyszłej daty, ma status `uchwalone`,
 - **datę wejścia w życie**, jeśli jest podana,
 - **typ źródła**: `oficjalne` (Dziennik Ustaw, ISAP, gov.pl, legislacja.gov.pl, EUR-Lex, GITD, PIP, ZUS, MF) albo `medium branżowe`.
 
@@ -51,9 +51,9 @@ Gdy strona nie otwiera się (paywall, blokada, błąd), poszukaj innego źródł
 Wybierz od 5 do 10 tematów najbardziej istotnych dla klientów biura rachunkowego obsługującego transport. Newsy o tej samej zmianie połącz w jeden temat. Jeśli zweryfikowanych tematów jest mniej niż 5, podaj tyle, ile jest, i nie dopychaj słabych. Obszary bez nowości wypisz w sekcji „Obszary bez istotnych nowości”.
 
 Pilność (liczona od dzisiejszej daty do daty wejścia w życie):
-- 🔴 w ciągu 30 dni lub już obowiązuje od niedawna
+- 🔴 wchodzi w życie w ciągu najbliższych 30 dni albo wszedł w życie nie wcześniej niż 30 dni temu
 - 🟡 w ciągu 31–90 dni
-- ⚪ później, data nieznana albo projekt/zapowiedź
+- ⚪ później, data nieznana, projekt/zapowiedź albo obowiązuje dłużej niż 30 dni
 
 ## Zasady jakości (obowiązkowe)
 
