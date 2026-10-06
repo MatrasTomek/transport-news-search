@@ -140,6 +140,15 @@ function step_update(PDO $db, int $id, array $fields, int $now): void
     $db->prepare('UPDATE search_steps SET ' . implode(', ', $sets) . ' WHERE id = ?')->execute($params);
 }
 
+/** Atomowo przejmuje krok. Krok `running` uznajemy za porzucony po 2 × timeout + 60 s (wywołanie + ponowienie). */
+function step_claim(PDO $db, int $id, int $now, int $timeout): bool
+{
+    $st = $db->prepare("UPDATE search_steps SET status = 'running', updated_at = ? WHERE id = ?
+        AND (status IN ('pending', 'paused') OR (status = 'running' AND updated_at < ?))");
+    $st->execute([$now, $id, $now - (2 * $timeout + 60)]);
+    return $st->rowCount() === 1;
+}
+
 function step_retry(PDO $db, int $stepId, int $now): ?int
 {
     $step = step_get($db, $stepId);

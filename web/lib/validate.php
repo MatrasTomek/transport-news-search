@@ -94,7 +94,9 @@ function validate_synthesis(array $data): array
         throw new InvalidArgumentException('Brak listy "topics".');
     }
     $topics = array_values(array_filter(array_map('validate_topic', $data['topics'])));
-    $noNews = array_values(array_filter($data['no_news'] ?? [], fn($x) => is_string($x) && trim($x) !== ''));
+    $noNews = is_array($data['no_news'] ?? null)
+        ? array_values(array_filter($data['no_news'], fn($x) => is_string($x) && trim($x) !== ''))
+        : [];
     return [
         'topics' => array_slice($topics, 0, 10),
         'watch' => validate_watch($data['watch'] ?? []),

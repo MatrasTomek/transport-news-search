@@ -13,7 +13,7 @@ $step = step_next($DB, $searchId);
 if ($step === null) {
     json_response(['state' => 'finished', 'search_status' => $search['status']]);
 }
-if (step_is_busy($step, $now, $timeout)) {
+if (!step_claim($DB, (int)$step['id'], $now, $timeout)) {
     json_response(['state' => 'busy', 'label' => $step['label']]);
 }
 

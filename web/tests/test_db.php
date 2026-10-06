@@ -110,3 +110,16 @@ test('db: login_reset zeruje licznik', function () {
     login_register_failure($db, '1.2.3.4', 1000);
     assert_same(false, login_is_locked($db, '1.2.3.4', 1000));
 });
+
+test('db: step_claim jest atomowy i przejmuje zawieszony krok', function () {
+    [$db, $id] = db_with_search();
+    $step = steps_for($db, $id)[0];
+    assert_same(true, step_claim($db, (int)$step['id'], 1000, 150));
+    assert_same(false, step_claim($db, (int)$step['id'], 1001, 150));
+    assert_same(false, step_claim($db, (int)$step['id'], 1360, 150));
+    assert_same(true, step_claim($db, (int)$step['id'], 1361, 150));
+    step_update($db, (int)$step['id'], ['status' => 'paused'], 2000);
+    assert_same(true, step_claim($db, (int)$step['id'], 2001, 150));
+    step_update($db, (int)$step['id'], ['status' => 'done'], 3000);
+    assert_same(false, step_claim($db, (int)$step['id'], 9999, 150));
+});

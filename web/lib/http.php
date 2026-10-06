@@ -21,6 +21,8 @@ function api_guard(): array
     if (!csrf_valid($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null)) {
         json_response(['error' => 'Nieprawidłowy token bezpieczeństwa. Odśwież stronę.'], 403);
     }
+    // Zwalniamy blokadę sesji, żeby długie wywołanie Claude nie blokowało innych stron.
+    session_write_close();
     $body = json_decode((string)file_get_contents('php://input'), true);
     return is_array($body) ? $body : [];
 }

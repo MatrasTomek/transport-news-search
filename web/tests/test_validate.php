@@ -72,3 +72,7 @@ test('validate_synthesis: maks. 10 tematów i no_news', function () {
     assert_same(['ZUS i składki: brak istotnych zmian w okresie.'], $r['no_news']);
     assert_throws(InvalidArgumentException::class, fn() => validate_synthesis(['candidates' => []]));
 });
+
+test('validate_synthesis: no_news jako tekst nie wywraca walidacji', function () {
+    assert_same([], validate_synthesis(['topics' => [], 'no_news' => 'brak'])['no_news']);
+});

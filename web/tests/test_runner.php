@@ -45,12 +45,6 @@ test('build_steps: obszary i hasło', function () {
     assert_same([['label' => 'e-CMR', 'kind' => 'query'], ['label' => 'Wybór tematów', 'kind' => 'synthesis']], build_steps('e-CMR'));
 });
 
-test('step_is_busy: świeży running, stary running, inne statusy', function () {
-    assert_same(true, step_is_busy(['status' => 'running', 'updated_at' => 1000], 1100, 150));
-    assert_same(false, step_is_busy(['status' => 'running', 'updated_at' => 1000], 1211, 150));
-    assert_same(false, step_is_busy(['status' => 'paused', 'updated_at' => 1000], 1001, 150));
-});
-
 test('research: pause_turn zapisuje stan, kontynuacja kończy krok', function () {
     [$db, $search] = runner_setup('e-CMR');
     $req = [];
@@ -156,6 +150,34 @@ test('synteza: wszystkie kroki z błędem → wyszukiwanie error', function () {
     step_update($db, (int)$first['id'], ['status' => 'error', 'error' => 'x'], 1500);
     $req = [];
     $r = run_next($db, $search, fake_claude([], $req));
+    assert_same('error', $r['state']);
+    assert_same('error', search_get($db, (int)$search['id'])['status']);
+});
+
+test('research: nieoczekiwany wyjątek → krok error zamiast running', function () {
+    [$db, $search] = runner_setup('e-CMR');
+    $c = new ClaudeClient('k', 'm', fn() => throw new RuntimeException('awaria'));
+    $r = run_next($db, $search, $c);
+    assert_same('error', $r['state']);
+    assert_same('error', steps_for($db, (int)$search['id'])[0]['status']);
+});
+
+test('research: stop_reason max_tokens → błąd bez prośby o poprawkę', function () {
+    [$db, $search] = runner_setup('e-CMR');
+    $req = [];
+    $r = run_next($db, $search, fake_claude([fake_response([text_block('{"candidates": [')], 'max_tokens')], $req));
+    assert_same('error', $r['state']);
+    assert_true(str_contains($r['message'], 'limit długości'));
+    assert_same(1, count($req));
+    assert_same(16000, $req[0]['payload']['max_tokens']);
+});
+
+test('synteza: odmowa (refusal) → błąd wyszukiwania', function () {
+    [$db, $search] = runner_setup('e-CMR');
+    $first = steps_for($db, (int)$search['id'])[0];
+    step_update($db, (int)$first['id'], ['status' => 'done', 'result_json' => json_encode(validate_candidates(json_decode(candidate_json(), true)), JSON_UNESCAPED_UNICODE)], 1500);
+    $req = [];
+    $r = run_next($db, $search, fake_claude([fake_response([], 'refusal')], $req));
     assert_same('error', $r['state']);
     assert_same('error', search_get($db, (int)$search['id'])['status']);
 });

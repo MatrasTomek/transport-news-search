@@ -78,3 +78,17 @@ test('render_extras i render_history', function () {
     assert_true(str_contains($h, '6 obszarów'));
     assert_true(str_contains($h, 'href="index.php?search=3"'));
 });
+
+test('api_guard zwalnia blokadę sesji przed długim wywołaniem', function () {
+    $lib = realpath(__DIR__ . '/../lib');
+    $code = "<?php foreach (['util', 'db', 'auth', 'http'] as \$l) { require '$lib/' . \$l . '.php'; }\n"
+        . "ini_set('session.use_cookies', '0'); ini_set('session.cache_limiter', ''); ini_set('session.save_path', sys_get_temp_dir());\n"
+        . "session_start(); \$_SESSION['user'] = 'admin'; \$_SESSION['csrf'] = 'tok';\n"
+        . "\$_SERVER['REQUEST_METHOD'] = 'POST'; \$_SERVER['HTTP_X_CSRF_TOKEN'] = 'tok';\n"
+        . "api_guard(); echo session_status() === PHP_SESSION_NONE ? 'closed' : 'open';";
+    $f = tempnam(sys_get_temp_dir(), 'ag');
+    file_put_contents($f, $code);
+    $out = shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($f) . ' 2>&1');
+    unlink($f);
+    assert_same('closed', trim((string)$out));
+});

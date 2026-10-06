@@ -18,12 +18,6 @@ function research_tools(array $cfg): array
     ];
 }
 
-/** Krok w toku w innym żądaniu. Po timeout + 60 s uznajemy żądanie za przerwane. */
-function step_is_busy(array $step, int $now, int $timeout): bool
-{
-    return $step['status'] === 'running' && (int)$step['updated_at'] > $now - ($timeout + 60);
-}
-
 function run_step(PDO $db, ClaudeClient $claude, array $search, array $step, array $cfg, DateTimeImmutable $today, string $sources, int $now): array
 {
     $stepId = (int)$step['id'];
@@ -38,12 +32,35 @@ function run_step(PDO $db, ClaudeClient $claude, array $search, array $step, arr
             search_set_status($db, (int)$search['id'], 'error');
         }
         return ['state' => 'error', 'message' => $e->getMessage()];
+    } catch (Throwable $e) {
+        app_log("Krok {$stepId}: " . get_class($e) . ': ' . $e->getMessage());
+        $msg = 'Wystąpił nieoczekiwany błąd (szczegóły w data/app.log).';
+        step_update($db, $stepId, ['status' => 'error', 'error' => $msg], $now);
+        if ($step['kind'] === 'synthesis') {
+            search_set_status($db, (int)$search['id'], 'error');
+        }
+        return ['state' => 'error', 'message' => $msg];
     }
+}
+
+/** Komunikat dla odpowiedzi, której nie da się naprawić prośbą o poprawkę. */
+function stop_error(array $resp): ?string
+{
+    return match ($resp['stop_reason'] ?? '') {
+        'max_tokens' => 'Odpowiedź Claude przekroczyła limit długości. Ponów krok.',
+        'refusal' => 'Claude odmówił odpowiedzi w tym kroku.',
+        default => null,
+    };
 }
 
 /** Wspólna obsługa odpowiedzi z JSON: walidacja, jedna prośba o poprawkę, potem błąd. */
 function handle_json_answer(PDO $db, array $step, array $messages, bool $fixAttempted, array $resp, callable $validate, int $now): array
 {
+    $stop = stop_error($resp);
+    if ($stop !== null) {
+        step_update($db, (int)$step['id'], ['status' => 'error', 'error' => $stop, 'state_json' => null], $now);
+        return ['ok' => false, 'result' => ['state' => 'error', 'message' => $stop]];
+    }
     try {
         $data = extract_json(ClaudeClient::finalText($resp));
         if ($data === null) {
@@ -81,7 +98,7 @@ function run_research(PDO $db, ClaudeClient $claude, array $search, array $step,
     $messages ??= [user_message(prompt_research_user($step['kind'], $step['label'], $todayIso, $days))];
 
     $resp = $claude->send([
-        'max_tokens' => 8000,
+        'max_tokens' => 16000,
         'system' => prompt_research_system($cfg, $todayIso, $days, $sources),
         'messages' => $messages,
         'tools' => research_tools($cfg),
@@ -137,7 +154,7 @@ function run_synthesis(PDO $db, ClaudeClient $claude, array $search, array $step
     } else {
         [$messages, $fixAttempted] = load_state($step);
         $messages ??= [user_message(prompt_synthesis_user($candidates, $watch, $searched))];
-        $resp = $claude->send(['max_tokens' => 8000, 'system' => prompt_synthesis_system($cfg), 'messages' => $messages]);
+        $resp = $claude->send(['max_tokens' => 16000, 'system' => prompt_synthesis_system($cfg), 'messages' => $messages]);
         $messages = append_assistant($messages, $resp['content_raw']);
         $answer = handle_json_answer($db, $step, $messages, $fixAttempted, $resp, 'validate_synthesis', $now);
         if (!$answer['ok']) {
