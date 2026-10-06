@@ -88,3 +88,86 @@ function prompt_fix_json(string $error): string
 {
     return "Twoja odpowiedź nie jest poprawnym JSON w wymaganym formacie ({$error}). Zwróć ponownie wynik jako wyłącznie obiekt JSON w opisanym formacie, bez żadnego tekstu przed nim ani po nim.";
 }
+
+const POST_STYLES = [
+    'ekspercki' => 'Ekspercki i rzeczowy. Chwytliwe pierwsze zdanie, potem 2–4 krótkie akapity: co się zmienia, kogo dotyczy, od kiedy. 1–3 emoji jako wyróżniki punktów. Na końcu 3–5 hashtagów (np. #transport #VAT).',
+    'lekki' => 'Lekki i przystępny. Zacznij od pytania do czytelnika. Więcej emoji, prosty język, mniej szczegółów prawnych: tylko najważniejsze fakty i termin. Na końcu 3–5 hashtagów.',
+];
+
+function prompt_post_system(string $style, int $maxChars, array $cfg): string
+{
+    $styleText = POST_STYLES[$style] ?? POST_STYLES['ekspercki'];
+    return <<<TXT
+        Piszesz posty na fanpage na Facebooku biura rachunkowego {$cfg['company_name']} ({$cfg['blog_url']}) dla firm transportowych, przewoźników i wypożyczalni samochodów.
+
+        Styl: {$styleText}
+
+        Zasady:
+        - Opieraj się wyłącznie na faktach z podanych źródeł. Jeśli potrzebujesz szczegółów, otwórz źródła narzędziem web_fetch. Nie zgaduj dat, kwot ani treści przepisów.
+        - Pisz po polsku. Daty zapisuj jako DD.MM.RRRR.
+        - Dodaj pełny adres URL najlepszego źródła.
+        - Przed hashtagami dodaj zachętę: „{$cfg['contact_cta']}”
+        - Długość: maksymalnie {$maxChars} znaków łącznie ze spacjami, emoji, linkiem i hashtagami.
+        - Odpowiedz wyłącznie gotowym tekstem posta: bez wstępu, bez komentarzy, bez pogrubień ** i nagłówków Markdown.
+        TXT;
+}
+
+function prompt_post_user(array $topic, string $hints): string
+{
+    $lines = [
+        'Temat: ' . $topic['title'],
+        'Obszar: ' . $topic['area'],
+        'Status: ' . $topic['status'] . ' · Wchodzi w życie: ' . format_date_pl($topic['effective_date']),
+        'Opis: ' . $topic['summary'],
+        'Źródła:',
+    ];
+    foreach ($topic['sources'] as $s) {
+        $lines[] = '- ' . $s['title'] . ' — ' . $s['url'] . ' (' . $s['type'] . ($s['date'] ? ', ' . format_date_pl($s['date']) : '') . ')';
+    }
+    if ($hints !== '') {
+        $lines[] = 'Dodatkowe wskazówki: ' . $hints;
+    }
+    $lines[] = 'Napisz post na Facebooka o tym temacie.';
+    return implode("\n", $lines);
+}
+
+function prompt_shorten(int $maxChars, int $actual): string
+{
+    return "Post ma {$actual} znaków, a limit to {$maxChars}. Skróć go do maksymalnie {$maxChars} znaków, zachowując link, zachętę do kontaktu i hashtagi. Odpowiedz wyłącznie tekstem posta.";
+}
+
+function prompt_image_system(): string
+{
+    return <<<'TXT'
+        Jesteś grafikiem. Tworzysz grafiki do postów na Facebooku jako kod SVG.
+
+        Wymagania techniczne:
+        - Zwróć wyłącznie jeden kompletny dokument SVG zaczynający się od <svg xmlns="http://www.w3.org/2000/svg" …> i kończący na </svg>, bez komentarzy i bez Markdown.
+        - Bez <script>, <foreignObject>, <style> z importami, obrazów zewnętrznych, linków i czcionek zewnętrznych.
+        - Tylko kształty wektorowe (rect, circle, ellipse, path, polygon, line, text, tspan, linearGradient, radialGradient).
+        - Każdy tekst ma font-family="Arial, Helvetica, sans-serif".
+        - Tekst mieści się w grafice z marginesem co najmniej 60 px; długie hasło dziel na najwyżej 3 linie (<tspan>).
+        - Kompozycja czytelna na telefonie: duże hasło, prosta ilustracja, mocny kontrast.
+        TXT;
+}
+
+function prompt_image_user(array $topic, string $post, int $w, int $h, array $cfg): string
+{
+    $c = $cfg['brand_colors'];
+    $slotX = $w - 300;
+    $slotY = $h - 100;
+    $postShort = mb_substr($post, 0, 1500, 'UTF-8');
+    return <<<TXT
+        Rozmiar: {$w}×{$h} px, viewBox="0 0 {$w} {$h}".
+        Kolory firmy {$cfg['company_name']}: główny {$c['primary']}, akcent {$c['accent']}, tło {$c['background']}, tekst {$c['text']}.
+
+        Zawartość:
+        - Krótkie hasło po polsku (najwyżej 8 słów) oddające sedno posta. Nie przepisuj całego tytułu.
+        - Prosta ilustracja wektorowa związana z tematem (np. ciężarówka, dokument, kalendarz, symbol waluty, tarcza).
+        - Dokładnie ten element jako miejsce na logo (nie rysuj nic w tym obszarze): <rect id="logo-slot" x="{$slotX}" y="{$slotY}" width="260" height="70" fill="none"/>
+
+        Temat: {$topic['title']} ({$topic['area']})
+        Treść posta:
+        {$postShort}
+        TXT;
+}
