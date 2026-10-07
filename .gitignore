@@ -1,5 +1,2 @@
 /docs/
-/web/config.php
-/web/data/*
-!/web/data/.htaccess
-!/web/data/.gitkeep
+/firmy

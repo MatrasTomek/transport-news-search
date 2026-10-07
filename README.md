@@ -1,50 +1,45 @@
 # transport-search
 
-Komenda Claude Code, która wyszukuje nowości w przepisach transportowych i proponuje tematy na blog https://mawex-biuro.pl/blog.
+Komendy Claude Code, które wyszukują nowości dla wybranej firmy, proponują tematy na blog i piszą posty na Facebooka. Działają w terminalu, w ramach subskrypcji Claude Code (bez klucza API).
 
-## Użycie
+## Kolejność pracy
 
-1. Otwórz Claude Code w tym katalogu: `claude`
-2. Wpisz `/tematy` (ostatnie 14 dni) albo `/tematy 30` (ostatnie 30 dni, maks. 365).
-3. Raport zapisze się w `raporty/RRRR-MM-DD.md`. W tej samej sesji możesz dopytać, np. „rozwiń temat 3 w szkic wpisu”.
+Otwórz Claude Code w tym katalogu (`claude`) i wpisz:
 
-Bez otwierania sesji: `claude -p "/tematy 21"`
+1. `/firma mawex` — wybierz firmę (albo dodaj nową, patrz niżej).
+2. `/content KSeF, e-CMR` — opcjonalnie ustaw, czego szukać. Bez tego używane są obszary domyślne z profilu firmy.
+3. `/tematy 14` — wyszukaj nowości z ostatnich 14 dni (maks. 365). Raport zapisze się w `firmy/<id>/raporty/`.
+4. `/post 3` — napisz post o temacie nr 3 z ostatniego raportu. Post zapisze się w `firmy/<id>/posty/`.
 
-## Obszary
+Wybór firmy i zakres są zapamiętywane w plikach, więc po ponownym otwarciu terminala wystarczy `/tematy` i `/post`.
 
-Prawo transportowe · Czas pracy kierowców · Wypożyczalnie samochodów · Księgowość i podatki w transporcie · ZUS i składki · Kierowcy spoza UE
+## Firmy
 
-## Dostosowanie
+- `/firma` — pokazuje aktywną firmę i listę firm.
+- `/firma <id>` — przełącza firmę, np. `/firma mawex`.
+- `/firma dodaj <id> <adres strony>` — dodaje firmę, np. `/firma dodaj ksiegarnia-xyz https://ksiegarnia-xyz.pl`. Claude czyta stronę, tworzy profil, proponuje obszary domyślne i zaufane źródła dla branży. Bez adresu zapyta o informacje w rozmowie. Id: małe litery, cyfry i myślniki.
 
-- `zrodla.md`: lista zaufanych źródeł (dopisuj i usuwaj dowolnie).
-- `.claude/commands/tematy.md`: instrukcja komendy (obszary, format raportu, zasady).
+Każda firma ma katalog `firmy/<id>/`:
 
-Raport to materiał roboczy. Przed publikacją zweryfikuj treść przepisów w źródłach.
+- `profil.md` — nazwa, strona, czym się zajmuje, dla kogo piszemy, czego szukać, ton postów, zachęta w poście, hashtagi, obszary domyślne. Edytuj swobodnie.
+- `zrodla.md` — zaufane źródła, od których zaczyna się wyszukiwanie.
+- `zakres.md` — bieżący zakres ustawiony przez `/content`.
+- `raporty/`, `posty/` — wyniki.
 
-## Aplikacja web (`web/`)
+## Zakres wyszukiwania (`/content`)
 
-Ta sama funkcja co `/tematy`, ale w przeglądarce, po zalogowaniu. Wyniki są w tabeli, a przy każdym temacie jest przycisk „Pisz post” (post na Facebooka w zadanym limicie znaków) i „Wygeneruj obraz” (grafika PNG/SVG). Silnikiem jest Claude API (płatne według użycia: tokeny i opłata za każde wyszukiwanie web search).
+- `/content KSeF, e-CMR, tachografy` — tematy oddzielone przecinkami (najwyżej 8). `/tematy` szuka wtedy tylko w nich.
+- `/content` — pokazuje bieżący zakres.
+- `/content domyślne` — przywraca obszary domyślne z profilu firmy.
 
-### Uruchomienie lokalne
+## Posty na Facebooka (`/post`)
 
-1. Wymagane PHP 8.1+ z rozszerzeniami `pdo_sqlite`, `curl`, `dom`, `mbstring`.
-2. `cd web && cp config.example.php config.php`
-3. `php tools/hash.php` → wpisz hasło, wynik wklej do `password_hash` w `config.php`.
-4. Wpisz klucz API (`anthropic_api_key`), kolory firmy i ewentualnie model.
-5. Opcjonalnie wgraj logo jako `web/data/logo.png`.
-6. `php -S 127.0.0.1:8000` i otwórz http://127.0.0.1:8000
-7. Testy: `php tests/run.php`
+- Pełna postać: `/post <nr> [ekspercki|lekki] [limit znaków] [wskazówki]`, np. `/post 3 lekki 500 podkreśl termin`.
+- Domyślnie styl ekspercki i limit 1000 znaków (zakres 200–3000). Znaki liczy `node`, więc licznik zgadza się z rzeczywistą długością (także z emoji).
+- Ton, zachętę i hashtagi bierze z profilu firmy. W tej samej sesji możesz poprosić np. „skróć do 500 znaków” albo „wersja lekka”.
+- `/post` bez numeru wypisuje listę tematów z ostatniego raportu.
+- Przy limicie poniżej ok. 400 znaków sam link, zachęta i hashtagi mogą nie zmieścić się w limicie. Komenda wtedy ostrzega.
 
-### Wdrożenie na OVH
+Bez otwierania sesji: `claude -p "/tematy 21"`.
 
-1. Przygotuj `config.php` jak wyżej (lokalnie).
-2. Wgraj przez FTP całą zawartość katalogu `web/` do katalogu strony (np. `www/`), razem z `config.php` i plikami `.htaccess` i `.ovhconfig`.
-3. Katalog `data/` musi mieć prawo zapisu. Baza `data/app.sqlite` i `data/zrodla.md` powstaną przy pierwszym wejściu.
-4. W panelu OVH włącz bezpłatny certyfikat SSL (Let's Encrypt), a potem odkomentuj przekierowanie na HTTPS w `.htaccess`.
-5. W konsoli Anthropic ustaw miesięczny limit wydatków.
-
-**Aktualizacja:** wgraj ponownie pliki, ale **nie nadpisuj** katalogu `data/` ani `config.php`, bo straciłbyś historię wyszukiwań i swoją listę źródeł.
-
-**Limit czasu:** każdy krok wyszukiwania to jedno wywołanie API, które czeka najwyżej `api_timeout` sekund (domyślnie 150). Jeśli hosting przerywa żądania wcześniej, zmniejsz `api_timeout` w `config.php`. Przerwany krok można wznowić przyciskiem „Wznów” lub „Ponów”.
-
-Błędy aplikacji są zapisywane w `data/app.log` (niedostępnym z przeglądarki).
+Raporty i posty to materiał roboczy. Przed publikacją zweryfikuj informacje w źródłach.
