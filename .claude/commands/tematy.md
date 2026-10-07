@@ -1,16 +1,21 @@
 ---
-description: Wyszukaj nowości w przepisach transportowych i zaproponuj tematy na blog mawex-biuro.pl
+description: Wyszukaj nowości dla aktywnej firmy i zaproponuj tematy na blog i posty
 argument-hint: [dni]
-allowed-tools: WebSearch, WebFetch, Read, Write, Glob, Bash(date:*), Bash(ls:*)
+allowed-tools: WebSearch, WebFetch, Read, Write, Glob, Bash(date:*)
 ---
 
-Jesteś researcherem bloga biura rachunkowego MAWEX (https://mawex-biuro.pl/blog), które obsługuje firmy transportowe, przewoźników i wypożyczalnie samochodów. Twoim zadaniem jest znaleźć świeże zmiany w przepisach i praktyce, które warto opisać na blogu, i zapisać raport z propozycjami tematów.
+Jesteś researcherem treści dla firmy opisanej w jej profilu. Twoim zadaniem jest znaleźć świeże nowości, które warto opisać na blogu lub w poście tej firmy, i zapisać raport z propozycjami tematów.
 
 ## Dane wejściowe
 
 - Argument (liczba dni): `$ARGUMENTS`
 - Dzisiejsza data: !`date +%Y-%m-%d`
-- Istniejące raporty: !`ls raporty/ 2>/dev/null`
+
+## Krok 0 — aktywna firma
+
+Sprawdź narzędziem Glob, czy istnieje `firmy/aktywna.md`, i przeczytaj go. Id firmy to pierwsza niepusta linia. Jeśli pliku nie ma albo nie istnieje `firmy/<id>/profil.md`, napisz: „Nie wybrano firmy. Użyj /firma <id> albo /firma dodaj <id> <adres strony>.” i zakończ.
+
+Dalej `F` oznacza katalog `firmy/<id>`. Przeczytaj `F/profil.md`. Z pól **Nazwa**, **Czym się zajmuje**, **Dla kogo piszemy** i **Czego szukać** wynika, kim jesteś i jakie nowości są wartościowe. Wszystkie oceny ważności w tej komendzie odnoszą się do odbiorców z pola **Dla kogo piszemy**.
 
 ## Krok 1 — okres
 
@@ -21,39 +26,40 @@ Ustal N z argumentu:
 
 Okres to od (dzisiejsza data − N dni) do dzisiejszej daty włącznie. Policz datę początkową starannie, także przy przejściu przez granicę miesiąca lub roku.
 
-## Krok 2 — źródła
+## Krok 2 — źródła i zakres
 
-Przeczytaj plik `zrodla.md`. Zawiera listę zaufanych źródeł pogrupowaną według obszarów.
+Przeczytaj `F/zrodla.md` (jeśli istnieje). Zawiera listę zaufanych źródeł pogrupowaną według obszarów.
+
+Sprawdź narzędziem Glob, czy istnieje `F/zakres.md` (ustawiany komendą `/content`), i przeczytaj go:
+- jeśli zawiera listę tematów (linie `- <temat>`), **obszarami wyszukiwania są wyłącznie te tematy**, każdy jako osobny obszar o nazwie równej tematowi;
+- jeśli zawiera słowo „domyślne”, nie ma w nim żadnego tematu albo pliku nie ma, użyj obszarów z sekcji „Obszary domyślne” w `F/profil.md`.
+
+Zapamiętaj zakres do nagłówka raportu: lista tematów oddzielonych przecinkami albo „domyślne obszary”.
 
 ## Krok 3 — wyszukiwanie
 
-Dla każdego z 6 obszarów wykonaj kilka zapytań WebSearch. Najpierw zawężaj je do domen z `zrodla.md`, a potem szukaj szerzej. Szukaj po polsku; przy prawie UE także po angielsku.
-
-1. **Prawo transportowe**: Pakiet Mobilności, licencje, tachografy (w tym inteligentne), myto/e-TOLL, ustawa o transporcie drogowym, rozporządzenia UE.
-2. **Czas pracy kierowców**: rozporządzenie 561/2006, delegowanie kierowców, diety i ryczałty, kontrole PIP/GITD, orzecznictwo.
-3. **Wypożyczalnie samochodów**: najem krótkoterminowy, ubezpieczenia, CEPiK, VAT od najmu, wymogi wobec przedsiębiorców.
-4. **Księgowość i podatki w transporcie**: KSeF, VAT w transporcie międzynarodowym, akcyza, leasing i amortyzacja pojazdów, ulgi, JPK.
-5. **ZUS i składki**: podstawa wymiaru u kierowców, delegowanie (A1), zmiany w składkach przedsiębiorców.
-6. **Kierowcy spoza UE**: zezwolenia na pracę, świadectwa kierowcy, wymiana praw jazdy, legalizacja pobytu.
+Dla każdego obszaru wykonaj kilka zapytań WebSearch. Najpierw zawężaj je do domen z `F/zrodla.md`, a potem szukaj szerzej. Szukaj po polsku; przy przepisach UE i źródłach zagranicznych także po angielsku. Szukaj tego, co opisuje pole **Czego szukać** w profilu, w granicach danego obszaru.
 
 ## Krok 4 — weryfikacja
 
 Obiecujące wyniki otwórz przez WebFetch i ustal:
 - **datę publikacji lub zmiany**, która musi mieścić się w okresie (inaczej odrzuć),
-- **status**: dokładnie jedna z wartości `obowiązuje` / `uchwalone` / `projekt` / `zapowiedź`, bez dopisków w nawiasach. `obowiązuje` tylko wtedy, gdy przepis już jest stosowany; akt ogłoszony, ale stosowany od przyszłej daty, ma status `uchwalone`,
-- **datę wejścia w życie**, jeśli jest podana,
-- **typ źródła**: `oficjalne` (Dziennik Ustaw, ISAP, gov.pl, legislacja.gov.pl, EUR-Lex, GITD, PIP, ZUS, MF) albo `medium branżowe`.
+- **status**: dokładnie jedna z wartości bez dopisków w nawiasach:
+  - przy zmianach przepisów: `obowiązuje` / `uchwalone` / `projekt` / `zapowiedź`. `obowiązuje` tylko wtedy, gdy przepis już jest stosowany; akt ogłoszony, ale stosowany od przyszłej daty, ma status `uchwalone`,
+  - przy innych nowościach (premiera, wydarzenie, dane rynkowe, nowa usługa, trend): `nowość`,
+- **datę** — przy przepisach datę wejścia w życie, przy nowościach datę wydarzenia lub premiery, jeśli jest podana,
+- **typ źródła**: `oficjalne` (akty prawne, urzędy, rejestry, oficjalne komunikaty instytucji i organizacji branżowych) albo `medium branżowe` (portale, prasa, blogi).
 
 Gdy strona nie otwiera się (paywall, blokada, błąd), poszukaj innego źródła tej samej informacji. Jeśli nie znajdziesz potwierdzenia, informacja może trafić najwyżej do sekcji „Do obserwacji” z dopiskiem „(niezweryfikowane)”. Informacja bez ustalonej daty publikacji nie jest tematem. Może trafić najwyżej do „Do obserwacji”.
 
 ## Krok 5 — selekcja
 
-Wybierz od 5 do 10 tematów najbardziej istotnych dla klientów biura rachunkowego obsługującego transport. Newsy o tej samej zmianie połącz w jeden temat. Jeśli zweryfikowanych tematów jest mniej niż 5, podaj tyle, ile jest, i nie dopychaj słabych. Obszary bez nowości wypisz w sekcji „Obszary bez istotnych nowości”.
+Wybierz od 5 do 10 tematów najbardziej istotnych dla odbiorców z profilu. Newsy o tej samej sprawie połącz w jeden temat. Jeśli zweryfikowanych tematów jest mniej niż 5, podaj tyle, ile jest, i nie dopychaj słabych. Obszary bez nowości wypisz w sekcji „Obszary bez istotnych nowości”.
 
-Pilność (liczona od dzisiejszej daty do daty wejścia w życie):
-- 🔴 wchodzi w życie w ciągu najbliższych 30 dni albo wszedł w życie nie wcześniej niż 30 dni temu
+Pilność (liczona od dzisiejszej daty do daty z kroku 4):
+- 🔴 nastąpi w ciągu najbliższych 30 dni albo nastąpiło nie wcześniej niż 30 dni temu
 - 🟡 w ciągu 31–90 dni
-- ⚪ później, data nieznana, projekt/zapowiedź albo obowiązuje dłużej niż 30 dni
+- ⚪ później, data nieznana, projekt/zapowiedź albo nastąpiło ponad 30 dni temu
 
 ## Zasady jakości (obowiązkowe)
 
@@ -65,26 +71,28 @@ Pilność (liczona od dzisiejszej daty do daty wejścia w życie):
 
 ## Krok 6 — zapis
 
-Nazwa pliku: `raporty/<dzisiejsza data RRRR-MM-DD>.md`. Jeśli taki plik jest na liście istniejących raportów, użyj `-2`, a jeśli i ten istnieje, `-3` itd. Nigdy nie nadpisuj istniejącego raportu. Zapisz plik narzędziem Write dokładnie w tym formacie:
+Nazwa pliku: `F/raporty/<dzisiejsza data RRRR-MM-DD>.md`. Sprawdź narzędziem Glob (`F/raporty/<data>*.md`), czy taki plik istnieje. Jeśli tak, użyj `-2`, a jeśli i ten istnieje, `-3` itd. Nigdy nie nadpisuj istniejącego raportu. Zapisz plik narzędziem Write dokładnie w tym formacie:
 
 ```markdown
 # Tematy na blog — RRRR-MM-DD
+Firma: <Nazwa z profilu>
 Okres: ostatnie N dni (DD.MM.RRRR–DD.MM.RRRR) · Tematów: K
+Zakres: <lista tematów z zakres.md albo „domyślne obszary”>
 <notka o argumencie, jeśli dotyczy>
 
 ## Podsumowanie
 | # | Tytuł | Obszar | Status | Pilność |
 |---|-------|--------|--------|---------|
-| 1 | … | … | … | 🔴 wchodzi w życie DD.MM.RRRR |
+| 1 | … | … | … | 🔴 DD.MM.RRRR |
 
 ---
 
 ## 1. <Proponowany tytuł wpisu>
-**Obszar:** … · **Status:** … · **Wchodzi w życie:** DD.MM.RRRR (lub „nieznana”)
+**Obszar:** … · **Status:** … · **Data:** DD.MM.RRRR (wejście w życie albo data wydarzenia; „nieznana”, jeśli brak)
 
-**Co się zmienia:** 2–4 zdania.
+**Co się dzieje:** 2–4 zdania.
 **Kogo dotyczy:** …
-**Dlaczego warto o tym napisać:** znaczenie dla klientów biura rachunkowego.
+**Dlaczego warto o tym napisać:** znaczenie dla odbiorców firmy.
 **Proponowany zarys wpisu:**
 - punkt 1
 - punkt 2
@@ -95,17 +103,17 @@ Okres: ostatnie N dni (DD.MM.RRRR–DD.MM.RRRR) · Tematów: K
 ---
 
 ## Obszary bez istotnych nowości
-- <obszar>: brak istotnych zmian w okresie.
+- <obszar>: brak istotnych nowości w okresie.
 
 ## Do obserwacji
-- <projekt lub zapowiedź, krótko + link> (niezweryfikowane — jeśli dotyczy)
+- <projekt, zapowiedź lub sprawa do śledzenia, krótko + link> (niezweryfikowane — jeśli dotyczy)
 
 ---
-*Materiał roboczy wygenerowany automatycznie. Przed publikacją zweryfikuj treść przepisów w źródłach.*
+*Materiał roboczy wygenerowany automatycznie. Przed publikacją zweryfikuj informacje w źródłach.*
 ```
 
 Jeśli któraś sekcja końcowa jest pusta, wpisz w niej „brak”.
 
 ## Krok 7 — podsumowanie w terminalu
 
-Na koniec wypisz ścieżkę zapisanego pliku i numerowaną listę tytułów tematów z pilnością. Nie wypisuj całego raportu.
+Na koniec wypisz firmę, ścieżkę zapisanego pliku i numerowaną listę tytułów tematów z pilnością. Nie wypisuj całego raportu.

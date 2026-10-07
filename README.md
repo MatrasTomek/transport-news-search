@@ -1,32 +1,45 @@
 # transport-search
 
-Komenda Claude Code, która wyszukuje nowości w przepisach transportowych i proponuje tematy na blog https://mawex-biuro.pl/blog.
+Komendy Claude Code, które wyszukują nowości dla wybranej firmy, proponują tematy na blog i piszą posty na Facebooka. Działają w terminalu, w ramach subskrypcji Claude Code (bez klucza API).
 
-## Użycie
+## Kolejność pracy
 
-1. Otwórz Claude Code w tym katalogu: `claude`
-2. Wpisz `/tematy` (ostatnie 14 dni) albo `/tematy 30` (ostatnie 30 dni, maks. 365).
-3. Raport zapisze się w `raporty/RRRR-MM-DD.md`. W tej samej sesji możesz dopytać, np. „rozwiń temat 3 w szkic wpisu”.
+Otwórz Claude Code w tym katalogu (`claude`) i wpisz:
 
-Bez otwierania sesji: `claude -p "/tematy 21"`
+1. `/firma mawex` — wybierz firmę (albo dodaj nową, patrz niżej).
+2. `/content KSeF, e-CMR` — opcjonalnie ustaw, czego szukać. Bez tego używane są obszary domyślne z profilu firmy.
+3. `/tematy 14` — wyszukaj nowości z ostatnich 14 dni (maks. 365). Raport zapisze się w `firmy/<id>/raporty/`.
+4. `/post 3` — napisz post o temacie nr 3 z ostatniego raportu. Post zapisze się w `firmy/<id>/posty/`.
 
-## Posty na Facebooka
+Wybór firmy i zakres są zapamiętywane w plikach, więc po ponownym otwarciu terminala wystarczy `/tematy` i `/post`.
 
-Po wygenerowaniu raportu wpisz `/post <nr>`, np. `/post 3`. Komenda bierze temat o tym numerze z najnowszego raportu w `raporty/`, otwiera jego źródła i pisze post na fanpage MAWEX.
+## Firmy
+
+- `/firma` — pokazuje aktywną firmę i listę firm.
+- `/firma <id>` — przełącza firmę, np. `/firma mawex`.
+- `/firma dodaj <id> <adres strony>` — dodaje firmę, np. `/firma dodaj ksiegarnia-xyz https://ksiegarnia-xyz.pl`. Claude czyta stronę, tworzy profil, proponuje obszary domyślne i zaufane źródła dla branży. Bez adresu zapyta o informacje w rozmowie. Id: małe litery, cyfry i myślniki.
+
+Każda firma ma katalog `firmy/<id>/`:
+
+- `profil.md` — nazwa, strona, czym się zajmuje, dla kogo piszemy, czego szukać, ton postów, zachęta w poście, hashtagi, obszary domyślne. Edytuj swobodnie.
+- `zrodla.md` — zaufane źródła, od których zaczyna się wyszukiwanie.
+- `zakres.md` — bieżący zakres ustawiony przez `/content`.
+- `raporty/`, `posty/` — wyniki.
+
+## Zakres wyszukiwania (`/content`)
+
+- `/content KSeF, e-CMR, tachografy` — tematy oddzielone przecinkami (najwyżej 8). `/tematy` szuka wtedy tylko w nich.
+- `/content` — pokazuje bieżący zakres.
+- `/content domyślne` — przywraca obszary domyślne z profilu firmy.
+
+## Posty na Facebooka (`/post`)
 
 - Pełna postać: `/post <nr> [ekspercki|lekki] [limit znaków] [wskazówki]`, np. `/post 3 lekki 500 podkreśl termin`.
 - Domyślnie styl ekspercki i limit 1000 znaków (zakres 200–3000). Znaki liczy `node`, więc licznik zgadza się z rzeczywistą długością (także z emoji).
-- Post wyświetla się w terminalu i zapisuje w `posty/RRRR-MM-DD-temat-<nr>.md`. W tej samej sesji możesz poprosić np. „skróć do 500 znaków” albo „wersja lekka”.
+- Ton, zachętę i hashtagi bierze z profilu firmy. W tej samej sesji możesz poprosić np. „skróć do 500 znaków” albo „wersja lekka”.
 - `/post` bez numeru wypisuje listę tematów z ostatniego raportu.
 - Przy limicie poniżej ok. 400 znaków sam link, zachęta i hashtagi mogą nie zmieścić się w limicie. Komenda wtedy ostrzega.
 
-## Obszary
+Bez otwierania sesji: `claude -p "/tematy 21"`.
 
-Prawo transportowe · Czas pracy kierowców · Wypożyczalnie samochodów · Księgowość i podatki w transporcie · ZUS i składki · Kierowcy spoza UE
-
-## Dostosowanie
-
-- `zrodla.md`: lista zaufanych źródeł (dopisuj i usuwaj dowolnie).
-- `.claude/commands/tematy.md`: instrukcja komendy (obszary, format raportu, zasady).
-
-Raport to materiał roboczy. Przed publikacją zweryfikuj treść przepisów w źródłach.
+Raporty i posty to materiał roboczy. Przed publikacją zweryfikuj informacje w źródłach.
